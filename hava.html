@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hava Durumu</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg: #0a0a0a;
+            --text: #ffffff;
+            --text-dim: rgba(255, 255, 255, 0.6);
+            --accent: #00d4ff;
+            --warning: #ff006e;
+            --success: #00ff88;
+            --glass: rgba(255, 255, 255, 0.05);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        /* Header */
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            padding: 1.5rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 100;
+            background: linear-gradient(to bottom, var(--bg), transparent);
+        }
+
+        .logo {
+            font-size: 0.875rem;
+            font-weight: 600;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: var(--text-dim);
+        }
+
+        .admin-btn {
+            background: var(--glass);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-dim);
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            transition: all 0.3s;
+        }
+
+        .admin-btn:hover {
+            color: var(--text);
+            border-color: var(--accent);
+        }
+
+        .admin-btn.hidden {
+            display: none;
+        }
+
+        /* Main Display */
+        .display {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 6rem 2rem 2rem;
+            position: relative;
+        }
+
+        .date-display {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .date-day {
+            font-size: clamp(4rem, 15vw, 12rem);
+            font-weight: 900;
+            line-height: 0.9;
+            background: linear-gradient(135deg, var(--text) 0%, var(--accent) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.05em;
+        }
+
+        .date-month {
+            font-size: clamp(1rem, 3vw, 1.5rem);
+            color: var(--text-dim);
+            letter-spacing: 0.3em;
+            text-transform: uppercase;
+            margin-top: 0.5rem;
+        }
+
+        /* Warning Banner */
+        .warning-banner {
+            background: var(--warning);
+            color: var(--bg);
+            padding: 1rem 2rem;
+            text-align: center;
+            font-size: clamp(1rem, 2vw, 1.25rem);
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            animation: pulse 2s infinite;
+            display: none;
+        }
+
+        .warning-banner.active {
+            display: block;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
+        }
+
+        /* Time Slots */
+        .time-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 1rem;
+            max-width: 1400px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .time-slot {
+            text-align: center;
+            padding: 2rem 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            transition: all 0.3s;
+        }
+
+        .time-slot:hover {
+            border-color: var(--accent);
+            background: var(--glass);
+        }
+
+        .time-label {
+            font-size: 0.75rem;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            margin-bottom: 1rem;
+        }
+
+        .time-temp {
+            font-size: clamp(2rem, 5vw, 3.5rem);
+            font-weight: 300;
+            margin-bottom: 0.5rem;
+        }
+
+        .time-desc {
+            font-size: clamp(0.875rem, 1.5vw, 1rem);
+            color: var(--text-dim);
+            line-height: 1.4;
+        }
+
+        /* Info Section */
+        .info-section {
+            max-width: 800px;
+            margin: 3rem auto 0;
+            text-align: center;
+            padding: 2rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .note {
+            font-size: clamp(1.125rem, 2vw, 1.5rem);
+            line-height: 1.6;
+            margin-bottom: 1.5rem;
+        }
+
+        .tags {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .tag {
+            padding: 0.5rem 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            font-size: 0.875rem;
+            color: var(--text-dim);
+        }
+
+        .tag.alert {
+            border-color: var(--warning);
+            color: var(--warning);
+        }
+
+        .umbrella {
+            position: fixed;
+            top: 50%;
+            right: 2rem;
+            transform: translateY(-50%);
+            font-size: 8rem;
+            opacity: 0;
+            transition: opacity 0.5s;
+            pointer-events: none;
+        }
+
+        .umbrella.active {
+            opacity: 0.1;
+        }
+
+        /* Login Modal */
+        .modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s;
+        }
+
+        .modal.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .login-box {
+            background: var(--glass);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 3rem;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 400px;
+        }
+
+        .login-box h2 {
+            font-size: 1.5rem;
+            margin-bottom: 2rem;
+            text-align: center;
+            font-weight: 300;
+        }
+
+        .login-box input {
+            width: 100%;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            color: var(--text);
+            font-size: 1rem;
+        }
+
+        .login-box input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .login-box button {
+            width: 100%;
+            padding: 1rem;
+            background: var(--accent);
+            border: none;
+            border-radius: 6px;
+            color: var(--bg);
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+
+        .login-box.error {
+            animation: shake 0.5s;
+            border-color: var(--warning);
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+
+        /* Admin Panel */
+        .admin-panel {
+            position: fixed;
+            inset: 0;
+            background: var(--bg);
+            z-index: 500;
+            padding: 2rem;
+            overflow-y: auto;
+            display: none;
+        }
+
+        .admin-panel.active {
+            display: block;
+        }
+
+        .admin-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 3rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .admin-header h2 {
+            font-weight: 300;
+            letter-spacing: 0.1em;
+        }
+
+        .close-admin {
+            background: none;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: var(--text);
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 2rem;
+            max-width: 1000px;
+        }
+
+        .form-section h3 {
+            font-size: 0.75rem;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            margin-bottom: 1rem;
+        }
+
+        .form-section input,
+        .form-section select {
+            width: 100%;
+            padding: 0.875rem;
+            margin-bottom: 0.75rem;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            color: var(--text);
+        }
+
+        .form-section input:focus,
+        .form-section select:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .checkbox-group {
+            display: flex;
+            gap: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        .checkbox-group label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+        }
+
+        .admin-actions {
+            margin-top: 3rem;
+            display: flex;
+            gap: 1rem;
+            max-width: 1000px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 1rem 2rem;
+            border: none;
+            border-radius: 6px;
+            font-size: 1rem;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .btn-save {
+            background: var(--success);
+            color: var(--bg);
+        }
+
+        .btn-delete {
+            background: var(--warning);
+            color: var(--bg);
+        }
+
+        /* Loader */
+        .loader {
+            position: fixed;
+            inset: 0;
+            background: var(--bg);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            transition: opacity 0.3s;
+        }
+
+        .loader.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .loader::after {
+            content: '';
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: var(--glass);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 1rem 2rem;
+            border-radius: 6px;
+            z-index: 3000;
+            opacity: 0;
+            transition: all 0.3s;
+        }
+
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+
+        .toast.error {
+            border-color: var(--warning);
+            color: var(--warning);
+        }
+
+        .toast.success {
+            border-color: var(--success);
+            color: var(--success);
+        }
+
+        @media (max-width: 768px) {
+            .time-grid {
+                grid-template-columns: 1fr;
+            }
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+            .umbrella {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="loader" id="loader"></div>
+
+    <header class="header">
+        <div class="logo">Hava Durumu</div>
+        <button class="admin-btn" id="adminBtn" onclick="openLogin()">Admin</button>
+    </header>
+
+    <div class="warning-banner" id="warningBanner">
+        ⚠️ KRİTİK HAVA UYARISI
+    </div>
+
+    <main class="display" id="mainDisplay">
+        <div class="date-display">
+            <div class="date-day" id="displayDay">--</div>
+            <div class="date-month" id="displayMonth">--------</div>
+        </div>
+
+        <div class="time-grid">
+            <div class="time-slot">
+                <div class="time-label">Sabah</div>
+                <div class="time-temp" id="tempSabah">--</div>
+                <div class="time-desc" id="descSabah">--</div>
+            </div>
+            <div class="time-slot">
+                <div class="time-label">Öğlen</div>
+                <div class="time-temp" id="tempOglen">--</div>
+                <div class="time-desc" id="descOglen">--</div>
+            </div>
+            <div class="time-slot">
+                <div class="time-label">İkindi</div>
+                <div class="time-temp" id="tempIkindi">--</div>
+                <div class="time-desc" id="descIkindi">--</div>
+            </div>
+            <div class="time-slot">
+                <div class="time-label">Akşam</div>
+                <div class="time-temp" id="tempAksam">--</div>
+                <div class="time-desc" id="descAksam">--</div>
+            </div>
+            <div class="time-slot">
+                <div class="time-label">Gece</div>
+                <div class="time-temp" id="tempGece">--</div>
+                <div class="time-desc" id="descGece">--</div>
+            </div>
+        </div>
+
+        <div class="info-section">
+            <div class="note" id="genelNot">--</div>
+            <div class="tags" id="tags"></div>
+        </div>
+    </main>
+
+    <div class="umbrella" id="umbrella">☂️</div>
+
+    <!-- Login Modal -->
+    <div class="modal" id="loginModal">
+        <div class="login-box" id="loginBox">
+            <h2>Admin Girişi</h2>
+            <form onsubmit="handleLogin(event)">
+                <input type="text" id="username" placeholder="Kullanıcı adı" required>
+                <input type="password" id="password" placeholder="Şifre" required>
+                <button type="submit">Giriş Yap</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Admin Panel -->
+    <div class="admin-panel" id="adminPanel">
+        <div class="admin-header">
+            <h2>GÜN DÜZENLE</h2>
+            <button class="close-admin" onclick="closeAdmin()">Kapat</button>
+        </div>
+
+        <div class="form-grid">
+            <div class="form-section">
+                <h3>Tarih</h3>
+                <input type="date" id="editTarih">
+            </div>
+
+            <div class="form-section">
+                <h3>Sabah (06:00-11:00)</h3>
+                <input type="text" id="editSabahTemp" placeholder="Sıcaklık (örn: 12°C)">
+                <input type="text" id="editSabahDesc" placeholder="Açıklama">
+            </div>
+
+            <div class="form-section">
+                <h3>Öğlen (11:00-15:00)</h3>
+                <input type="text" id="editOglenTemp" placeholder="Sıcaklık">
+                <input type="text" id="editOglenDesc" placeholder="Açıklama">
+            </div>
+
+            <div class="form-section">
+                <h3>İkindi (15:00-18:00)</h3>
+                <input type="text" id="editIkindiTemp" placeholder="Sıcaklık">
+                <input type="text" id="editIkindiDesc" placeholder="Açıklama">
+            </div>
+
+            <div class="form-section">
+                <h3>Akşam (18:00-22:00)</h3>
+                <input type="text" id="editAksamTemp" placeholder="Sıcaklık">
+                <input type="text" id="editAksamDesc" placeholder="Açıklama">
+            </div>
+
+            <div class="form-section">
+                <h3>Gece (22:00-06:00)</h3>
+                <input type="text" id="editGeceTemp" placeholder="Sıcaklık">
+                <input type="text" id="editGeceDesc" placeholder="Açıklama">
+            </div>
+
+            <div class="form-section">
+                <h3>Ayarlar</h3>
+                <div class="checkbox-group">
+                    <label>
+                        <input type="checkbox" id="editSemsiye">
+                        <span>Şemsiye</span>
+                    </label>
+                    <label>
+                        <input type="checkbox" id="editKritik">
+                        <span>Kritik Uyarı</span>
+                    </label>
+                </div>
+                <input type="text" id="editNot" placeholder="Genel not">
+            </div>
+
+            <div class="form-section">
+                <h3>Ekstra</h3>
+                <div class="checkbox-group">
+                    <label>
+                        <input type="checkbox" id="editFirtina">
+                        <span>Fırtına</span>
+                    </label>
+                    <label>
+                        <input type="checkbox" id="editDon">
+                        <span>Don</span>
+                    </label>
+                </div>
+                <select id="editRuzgar">
+                    <option value="hafif">Hafif Rüzgar</option>
+                    <option value="orta">Orta Rüzgar</option>
+                    <option value="sert">Sert Rüzgar</option>
+                </select>
+                <input type="number" id="editNem" placeholder="Nem %" min="0" max="100">
+            </div>
+        </div>
+
+        <div class="admin-actions">
+            <button class="btn btn-save" onclick="saveData()">💾 KAYDET</button>
+            <button class="btn btn-delete" onclick="deleteData()">🗑️ SİL VE SIFIRLA</button>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        const CONFIG = {
+            binId: '69a43afdae596e708f550f46',
+            masterKey: '$2a$10$O4WOdX/WpPwo.zHyFIa.n.O50D6eCOtPhIuqNu2T8ynbbVqOhYdmW',
+            auth: { username: 'kerem', password: 'yarak' }
+        };
+
+        let currentData = null;
+
+        // Fetch data
+        async function loadData() {
+            showLoader(true);
+            try {
+                const res = await fetch(`https://api.jsonbin.io/v3/b/${CONFIG.binId}/latest`, {
+                    headers: { 'X-Master-Key': CONFIG.masterKey }
+                });
+                
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                
+                const result = await res.json();
+                currentData = result.record;
+                
+                if (!currentData || typeof currentData !== 'object') {
+                    throw new Error('Invalid data structure');
+                }
+                
+                render(currentData);
+                showToast('Yüklendi', 'success');
+            } catch (err) {
+                console.error(err);
+                showToast('Bağlantı hatası: ' + err.message, 'error');
+                // Load default if empty
+                currentData = getDefaultData();
+                render(currentData);
+            } finally {
+                showLoader(false);
+            }
+        }
+
+        function getDefaultData() {
+            return {
+                tarih: new Date().toISOString().split('T')[0],
+                sabah: { saat: '06:00-11:00', sicaklik: '--', aciklama: 'Veri yok' },
+                oglen: { saat: '11:00-15:00', sicaklik: '--', aciklama: 'Veri yok' },
+                ikindi: { saat: '15:00-18:00', sicaklik: '--', aciklama: 'Veri yok' },
+                aksam: { saat: '18:00-22:00', sicaklik: '--', aciklama: 'Veri yok' },
+                gece: { saat: '22:00-06:00', sicaklik: '--', aciklama: 'Veri yok' },
+                semsiye: false,
+                kritikUyari: false,
+                genelNot: 'Henüz veri girilmedi',
+                extra: { firtina: false, don: false, ruzgar: 'hafif', nem: '' }
+            };
+        }
+
+        function render(data) {
+            const date = new Date(data.tarih);
+            document.getElementById('displayDay').textContent = date.getDate();
+            document.getElementById('displayMonth').textContent = date.toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' });
+
+            // Temps and descs
+            document.getElementById('tempSabah').textContent = data.sabah?.sicaklik || '--';
+            document.getElementById('descSabah').textContent = data.sabah?.aciklama || '--';
+            document.getElementById('tempOglen').textContent = data.oglen?.sicaklik || '--';
+            document.getElementById('descOglen').textContent = data.oglen?.aciklama || '--';
+            document.getElementById('tempIkindi').textContent = data.ikindi?.sicaklik || '--';
+            document.getElementById('descIkindi').textContent = data.ikindi?.aciklama || '--';
+            document.getElementById('tempAksam').textContent = data.aksam?.sicaklik || '--';
+            document.getElementById('descAksam').textContent = data.aksam?.aciklama || '--';
+            document.getElementById('tempGece').textContent = data.gece?.sicaklik || '--';
+            document.getElementById('descGece').textContent = data.gece?.aciklama || '--';
+
+            // Warning
+            document.getElementById('warningBanner').classList.toggle('active', data.kritikUyari);
+
+            // Note
+            document.getElementById('genelNot').textContent = data.genelNot || '';
+
+            // Tags
+            const tags = document.getElementById('tags');
+            tags.innerHTML = '';
+            
+            if (data.semsiye) {
+                tags.innerHTML += '<span class="tag alert">☂️ Şemsiye Gerekli</span>';
+                document.getElementById('umbrella').classList.add('active');
+            } else {
+                document.getElementById('umbrella').classList.remove('active');
+            }
+            
+            if (data.extra?.firtina) tags.innerHTML += '<span class="tag">🌪️ Fırtına</span>';
+            if (data.extra?.don) tags.innerHTML += '<span class="tag">❄️ Don</span>';
+            if (data.extra?.ruzgar) tags.innerHTML += `<span class="tag">💨 ${data.extra.ruzgar}</span>`;
+            if (data.extra?.nem) tags.innerHTML += `<span class="tag">💧 %${data.extra.nem}</span>`;
+        }
+
+        // Admin functions
+        function openLogin() {
+            document.getElementById('loginModal').classList.add('active');
+        }
+
+        function handleLogin(e) {
+            e.preventDefault();
+            const u = document.getElementById('username').value;
+            const p = document.getElementById('password').value;
+            const box = document.getElementById('loginBox');
+
+            if (u === CONFIG.auth.username && p === CONFIG.auth.password) {
+                document.getElementById('loginModal').classList.remove('active');
+                document.getElementById('adminBtn').classList.add('hidden');
+                openAdmin();
+            } else {
+                box.classList.add('error');
+                setTimeout(() => box.classList.remove('error'), 500);
+            }
+        }
+
+        function openAdmin() {
+            // Fill form with current data
+            const d = currentData || getDefaultData();
+            document.getElementById('editTarih').value = d.tarih;
+            document.getElementById('editSabahTemp').value = d.sabah?.sicaklik || '';
+            document.getElementById('editSabahDesc').value = d.sabah?.aciklama || '';
+            document.getElementById('editOglenTemp').value = d.oglen?.sicaklik || '';
+            document.getElementById('editOglenDesc').value = d.oglen?.aciklama || '';
+            document.getElementById('editIkindiTemp').value = d.ikindi?.sicaklik || '';
+            document.getElementById('editIkindiDesc').value = d.ikindi?.aciklama || '';
+            document.getElementById('editAksamTemp').value = d.aksam?.sicaklik || '';
+            document.getElementById('editAksamDesc').value = d.aksam?.aciklama || '';
+            document.getElementById('editGeceTemp').value = d.gece?.sicaklik || '';
+            document.getElementById('editGeceDesc').value = d.gece?.aciklama || '';
+            document.getElementById('editSemsiye').checked = d.semsiye || false;
+            document.getElementById('editKritik').checked = d.kritikUyari || false;
+            document.getElementById('editNot').value = d.genelNot || '';
+            document.getElementById('editFirtina').checked = d.extra?.firtina || false;
+            document.getElementById('editDon').checked = d.extra?.don || false;
+            document.getElementById('editRuzgar').value = d.extra?.ruzgar || 'hafif';
+            document.getElementById('editNem').value = d.extra?.nem || '';
+
+            document.getElementById('adminPanel').classList.add('active');
+        }
+
+        function closeAdmin() {
+            document.getElementById('adminPanel').classList.remove('active');
+            document.getElementById('adminBtn').classList.remove('hidden');
+        }
+
+        async function saveData() {
+            const newData = {
+                tarih: document.getElementById('editTarih').value,
+                sabah: {
+                    saat: '06:00-11:00',
+                    sicaklik: document.getElementById('editSabahTemp').value,
+                    aciklama: document.getElementById('editSabahDesc').value
+                },
+                oglen: {
+                    saat: '11:00-15:00',
+                    sicaklik: document.getElementById('editOglenTemp').value,
+                    aciklama: document.getElementById('editOglenDesc').value
+                },
+                ikindi: {
+                    saat: '15:00-18:00',
+                    sicaklik: document.getElementById('editIkindiTemp').value,
+                    aciklama: document.getElementById('editIkindiDesc').value
+                },
+                aksam: {
+                    saat: '18:00-22:00',
+                    sicaklik: document.getElementById('editAksamTemp').value,
+                    aciklama: document.getElementById('editAksamDesc').value
+                },
+                gece: {
+                    saat: '22:00-06:00',
+                    sicaklik: document.getElementById('editGeceTemp').value,
+                    aciklama: document.getElementById('editGeceDesc').value
+                },
+                semsiye: document.getElementById('editSemsiye').checked,
+                kritikUyari: document.getElementById('editKritik').checked,
+                genelNot: document.getElementById('editNot').value,
+                extra: {
+                    firtina: document.getElementById('editFirtina').checked,
+                    don: document.getElementById('editDon').checked,
+                    ruzgar: document.getElementById('editRuzgar').value,
+                    nem: document.getElementById('editNem').value
+                }
+            };
+
+            showLoader(true);
+            try {
+                const res = await fetch(`https://api.jsonbin.io/v3/b/${CONFIG.binId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Master-Key': CONFIG.masterKey
+                    },
+                    body: JSON.stringify(newData)
+                });
+
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+                currentData = newData;
+                render(newData);
+                closeAdmin();
+                showToast('Kaydedildi', 'success');
+            } catch (err) {
+                showToast('Hata: ' + err.message, 'error');
+            } finally {
+                showLoader(false);
+            }
+        }
+
+        async function deleteData() {
+            if (!confirm('Tüm veriler silinecek. Emin misiniz?')) return;
+
+            const defaultData = getDefaultData();
+            
+            showLoader(true);
+            try {
+                const res = await fetch(`https://api.jsonbin.io/v3/b/${CONFIG.binId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Master-Key': CONFIG.masterKey
+                    },
+                    body: JSON.stringify(defaultData)
+                });
+
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+                currentData = defaultData;
+                render(defaultData);
+                closeAdmin();
+                showToast('Sıfırlandı', 'success');
+            } catch (err) {
+                showToast('Hata: ' + err.message, 'error');
+            } finally {
+                showLoader(false);
+            }
+        }
+
+        // Utils
+        function showLoader(show) {
+            document.getElementById('loader').classList.toggle('hidden', !show);
+        }
+
+        function showToast(msg, type) {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.className = `toast ${type}`;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        // Close modal on outside click
+        document.getElementById('loginModal').addEventListener('click', (e) => {
+            if (e.target === e.currentTarget) e.target.classList.remove('active');
+        });
+
+        // Init
+        loadData();
+    </script>
+</body>
+</html>
